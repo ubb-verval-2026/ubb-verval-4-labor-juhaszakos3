@@ -97,8 +97,10 @@ public class PersonPageTests
         Assert.That(verificationErrors.ToString(), Is.EqualTo(""));
     }
 
-    [Test]
-    public void Person_SalaryIncrease_ShouldIncrease()
+    [TestCase(0, 5000)]
+    [TestCase(5, 5250)]
+    [TestCase(-9, 4550)]
+    public void Person_SalaryIncrease_ShouldIncrease(int percentage, double expectedSalary)
     {
         // Arrange
         driver.Navigate().GoToUrl(BaseURL);
@@ -108,7 +110,7 @@ public class PersonPageTests
 
         var input = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreasePercentageInput']")));
         input.Clear();
-        input.SendKeys("5");
+        input.SendKeys(percentage.ToString());
 
         // Act
         var submitButton = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreaseSubmitButton']")));
@@ -118,8 +120,40 @@ public class PersonPageTests
         // Assert
         var salaryLabel = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='DisplayedSalary']")));
         var salaryAfterSubmission = double.Parse(salaryLabel.Text);
-        salaryAfterSubmission.Should().BeApproximately(5250, 0.001);
+        salaryAfterSubmission.Should().BeApproximately(expectedSalary, 0.001);
     }
+
+    [Test]
+    public void Person_SalaryIncrease_InvalidPercentage_ShouldDisplayValidationErrors()
+    {
+        // Arrange
+        driver.Navigate().GoToUrl(BaseURL);
+        driver.FindElement(By.XPath("//*[@data-test='PersonPageNavigation']")).Click();
+
+        var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
+
+        // Act - Enter invalid percentage (exactly -10 is not allowed)
+        var input = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreasePercentageInput']")));
+        input.Clear();
+        input.SendKeys("-10");
+
+        var submitButton = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreaseSubmitButton']")));
+        submitButton.Click();
+
+        // Assert - Check for validation error messages
+        // Look for error in ValidationSummary at the top of the form
+        var validationSummary = wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector(".validation-errors")));
+        validationSummary.Should().NotBeEmpty("ValidationSummary should display");
+
+        var summaryErrorText = validationSummary.FirstOrDefault()?.Text ?? "";
+        summaryErrorText.Should().Contain("greater than -10", "ValidationSummary should contain the error message");
+
+        // Look for error message below the input field (ValidationMessage)
+        var validationMessages = driver.FindElements(By.CssSelector(".invalid-feedback"));
+        var fieldErrorMessage = validationMessages.FirstOrDefault(el => el.Displayed)?.Text ?? "";
+        fieldErrorMessage.Should().Contain("greater than -10", "Field validation message should be displayed");
+    }
+
     private bool IsElementPresent(By by)
     {
         try
