@@ -122,6 +122,38 @@ public class PersonPageTests
         var salaryAfterSubmission = double.Parse(salaryLabel.Text);
         salaryAfterSubmission.Should().BeApproximately(expectedSalary, 0.001);
     }
+
+    [Test]
+    public void Person_SalaryIncrease_InvalidPercentage_ShouldDisplayValidationErrors()
+    {
+        // Arrange
+        driver.Navigate().GoToUrl(BaseURL);
+        driver.FindElement(By.XPath("//*[@data-test='PersonPageNavigation']")).Click();
+
+        var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
+
+        // Act - Enter invalid percentage (less than -10)
+        var input = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreasePercentageInput']")));
+        input.Clear();
+        input.SendKeys("-15");
+
+        var submitButton = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreaseSubmitButton']")));
+        submitButton.Click();
+
+        // Assert - Check for validation error messages
+        // Look for error in ValidationSummary at the top of the form
+        var validationSummary = wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.CssSelector(".validation-errors")));
+        validationSummary.Should().NotBeEmpty("ValidationSummary should display");
+
+        var summaryErrorText = validationSummary.FirstOrDefault()?.Text ?? "";
+        summaryErrorText.Should().Contain("between -10 and infinity", "ValidationSummary should contain the range error message");
+
+        // Look for error message below the input field (ValidationMessage)
+        var validationMessages = driver.FindElements(By.CssSelector(".invalid-feedback"));
+        var fieldErrorMessage = validationMessages.FirstOrDefault(el => el.Displayed)?.Text ?? "";
+        fieldErrorMessage.Should().Contain("between -10 and infinity", "Field validation message should be displayed");
+    }
+
     private bool IsElementPresent(By by)
     {
         try
