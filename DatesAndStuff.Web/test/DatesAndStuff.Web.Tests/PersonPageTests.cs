@@ -99,7 +99,7 @@ public class PersonPageTests
 
     [TestCase(0, 5000)]
     [TestCase(5, 5250)]
-    [TestCase(-10, 4500)]
+    [TestCase(-9, 4550)]
     public void Person_SalaryIncrease_ShouldIncrease(int percentage, double expectedSalary)
     {
         // Arrange
@@ -132,10 +132,10 @@ public class PersonPageTests
 
         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
 
-        // Act - Enter invalid percentage (less than -10)
+        // Act - Enter invalid percentage (exactly -10 is not allowed)
         var input = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreasePercentageInput']")));
         input.Clear();
-        input.SendKeys("-15");
+        input.SendKeys("-10");
 
         var submitButton = wait.Until(ExpectedConditions.ElementExists(By.XPath("//*[@data-test='SalaryIncreaseSubmitButton']")));
         submitButton.Click();
@@ -146,12 +146,12 @@ public class PersonPageTests
         validationSummary.Should().NotBeEmpty("ValidationSummary should display");
 
         var summaryErrorText = validationSummary.FirstOrDefault()?.Text ?? "";
-        summaryErrorText.Should().Contain("between -10 and infinity", "ValidationSummary should contain the range error message");
+        summaryErrorText.Should().Contain("greater than -10", "ValidationSummary should contain the error message");
 
         // Look for error message below the input field (ValidationMessage)
         var validationMessages = driver.FindElements(By.CssSelector(".invalid-feedback"));
         var fieldErrorMessage = validationMessages.FirstOrDefault(el => el.Displayed)?.Text ?? "";
-        fieldErrorMessage.Should().Contain("between -10 and infinity", "Field validation message should be displayed");
+        fieldErrorMessage.Should().Contain("greater than -10", "Field validation message should be displayed");
     }
 
     private bool IsElementPresent(By by)
